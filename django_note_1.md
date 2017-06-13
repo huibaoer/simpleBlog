@@ -147,3 +147,28 @@ class Article(models.Model):
     </body>
     </html>
   ```
+
+## admin
+- 配置admin
+  - 创建用户 python3 manage.py createsuperuser 创建超级用户
+  - 启动服务，登录admin，查看效果
+  - 将admin后台修改为中文，在settings.py中修改 LANGUAGE_CODE = 'zh_Hans'
+- 配置应用，才能admin下管理应用
+  - 在应用下admin.py中引入自身的models模块（或者里面的模型类）
+  - 编辑admin.py：admin.site.register(models.Article)
+  ```
+    from django.contrib import admin
+    from . import models
+
+    admin.site.register(models.Article)
+  ```
+  - 登录admin，可以对数据进行增删改查等操作。同时可以使用数据库视图化工具实时查看数据库中的数据变化
+  - 修改数据默认显示的名称，在Article类下添加一个方法，python3使用__str__(self)，python2使用__unicode_(self)
+  ```
+    class Article(models.Model):
+      title = models.CharField(max_length=32, default='Title')
+      content = models.TextField(null=True)
+
+      def __str__(self):
+          return self.title
+  ```
