@@ -28,18 +28,122 @@
 - views.py文件中导入类 from django.http import HttpResponse
 - 在views中每个响应都是一个函数，创建响应的函数：
 ```
-def index(request):
-    return HttpResponse("Hello World!")
+  def index(request):
+      return HttpResponse("Hello World!")
 ```
 - 配置url，在urls.py中添加配置：
 ```
-import blog.views
+  import blog.views
 
-urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-    url(r'^index/', blog.views.index),
-]
+  urlpatterns = [
+      url(r'^admin/', admin.site.urls),
+      url(r'^index/', blog.views.index),
+  ]
 ```
 - 命令行执行命令python3 manage.py runserver，查看经典的 ‘Hello World！’ 吧
 
-## 为应用添加自己的urls.py配置文件
+## 为blog应用添加自己的urls.py配置文件
+- 在根urls.py中引入include
+```
+  from django.conf.urls import url, include
+  from django.contrib import admin
+
+  urlpatterns = [
+      url(r'^admin/', admin.site.urls),
+      url(r'^blog/', include('blog.urls')),
+  ]
+```
+
+- 在blog应用下新建urls.py文件，并添加如下代码
+```
+  from django.conf.urls import url
+  from . import views
+
+  urlpatterns = [
+      url(r'^index/', blog.views.index),
+  ]
+```
+
+## 为blog添加Templates
+- 在blog根目录下创建Templates目录，在Templates目录下创建blog同名目录（防止同名文件）
+- blog目录下创建index.html文件
+```
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <title>Title</title>
+  </head>
+  <body>
+  <h1>hello,blog</h1>
+  </body>
+  </html>
+```
+- 在views.py中返回render()，即可在浏览器中看到效果
+```
+  def index(request):
+      return render(request, 'blog/index.html')
+```
+- 使用render()传递参数
+  - render()中添加字典参数
+  ```
+    def index(request):
+      return render(request, 'blog/index.html', {'text': 'hello,blog,hahaha'})
+  ```
+  - index.html中使用render()传递过来的参数
+  ```
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+    </head>
+    <body>
+    <h1>{{text}}</h1>
+    </body>
+    </html>
+  ```
+
+## Models
+- 在应用根目录下models.py文件下引入models模块，创建类，继承models.Model，该类即是一张表，在该类中创建数据表的字段
+```
+from django.db import models
+
+
+class Article(models.Model):
+    title = models.CharField(max_length=32, default='Title')
+    content = models.TextField(null=True)
+```
+
+- 将数据模型映射成数据表
+命令行中进入manage.py同级目录，执行 python3 manage.py makemigrations app(可选)；再执行 python3 manage.py migrate
+
+- 查看db.sqlite3数据库
+可以使用数据库可视化工具查看生成的数据库内容，如navicat。blog_article就是models.py文件下创建的Article类生成的表，在blog_article表中添加一条记录，用于后续查看
+
+- 页面呈现model数据
+  - blog下的views.py下返回Article对象，引入models，获取键值为1的对象并返回
+  ```
+      from django.shortcuts import render
+      from django.http import HttpResponse
+      from . import models
+
+      def index(request):
+          article = models.Article.objects.get(pk=1)
+          return render(request, 'blog/index.html', {'article': article})
+  ```
+
+  - 修改前端，显示article对象返回的数据
+  ```
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+    </head>
+    <body>
+    <h1>{{ article.title }}</h1>
+    <h2>{{ article.content }}</h2>
+    </body>
+    </html>
+  ```
