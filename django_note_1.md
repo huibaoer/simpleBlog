@@ -172,3 +172,151 @@ class Article(models.Model):
       def __str__(self):
           return self.title
   ```
+
+## myblog完善
+  - 博客页面设计
+    - 博客主页面
+      - 文章标题列表，超链接
+      - 发表博客按钮（超链接）
+      后台代码：
+      ```
+        def index(request):
+          articles = models.Article.objects.all()
+          return render(request, 'blog/index.html', {'articles': articles})
+      ```
+      前段代码：
+      ```
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>Title</title>
+        </head>
+        <body>
+
+        <h1>
+            <a href="">新文章</a>
+        </h1>
+        {% for article in articles %}
+            <a href="">{{ article.title }}</a>
+            <br/>
+        {% endfor %}
+        </body>
+        </html>
+      ```
+    - 博客文章内容页面
+      - 标题
+      - 文章内容
+      - 修改文章按钮（超链接）
+      首先在Templates目录下，添加article_page.html文件
+      ```
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>Title</title>
+        </head>
+        <body>
+        <h1>{{ article.title }}</h1>>
+        <br/>
+        <h3>{{ article.content }}</h3>>
+        <br/><br/>
+        <a href="">修改文章</a>
+        </body>
+        </html>
+      ```
+      在views.py下添加article_page函数
+      ```
+        def article_page(request, article_id):
+          article = models.Article.objects.get(pk=article_id)
+          return render(request, 'blog/article_page.html', {'article': article})
+      ```
+      最后，urls.py中配置url，并传递article_id参数（使用主键id作为article_id），注意传递article_id参数的正则表达式的写法
+      ```
+        urlpatterns = [
+            url(r'index/', views.index),
+            url(r'article/(?P<article_id>[0-9]+)', views.article_page),
+        ]
+      ```
+      添加超链接，实现点击列表页面中文章标题后跳转到指定文章的效果，django的Templates中超链接的写法 href="{% url 'app_namespace:url_name' param %}"
+      在根urls.py下，为blog url添加namespace
+      ```
+        urlpatterns = [
+          url(r'^admin/', admin.site.urls),
+          url(r'^blog/', include('blog.urls', namespace='blog')),
+        ]
+      ```
+      在blog的urls.py下，为article url添加name
+      ```
+        urlpatterns = [
+            url(r'index/', views.index),
+            url(r'article/(?P<article_id>[0-9]+)', views.article_page, name='article_page'),
+        ]
+      ```
+      在index.html中添加超链接
+      ```
+        <body>
+
+        <h1>
+            <a href="">新文章</a>
+        </h1>
+        {% for article in articles %}
+            <a href="{% url 'blog:article_page' article.id %}">{{ article.title }}</a>
+            <br/>
+        {% endfor %}
+        </body>
+      ```
+    - 博客撰写页面
+      - 标题编辑栏
+      - 文章内容编辑区域
+      - 提交按钮
+      首先创建edit_page.html文件
+      ```
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>Title</title>
+        </head>
+        <body>
+        <form action="{% url 'blog:edit_action' %}" method="post">{% csrf_token %}
+            <label>文章标题
+                <input type="text" name="title"/>
+            </label>
+            <br/>
+            <label>文章内容
+                <input type="text" name="content">
+            </label>
+            <br/>
+            <input type="submit" value="提交">
+        </form>
+
+        </body>
+        </html>
+      ```
+      在views.py中添加编辑页面和提交按钮的函数
+      ```
+        def edit_page(request):
+          return render(request, 'blog/edit_page.html')
+
+
+        def edit_action(request):
+            title = request.POST.get('title', 'TITLE')
+            content = request.POST.get('content', 'CONTENT')
+            models.Article.objects.create(title=title, content=content)
+            articles = models.Article.objects.all()
+            return render(request, 'blog/index.html', {'articles': articles})
+      ```
+      在urls.py中添加相关url
+      ```
+        urlpatterns = [
+            url(r'index/$', views.index),
+            url(r'article/(?P<article_id>[0-9]+)/$', views.article_page, name='article_page'),
+            url(r'edit/$', views.edit_page, name='edit_page'),
+            url(r'edit/action/$', views.edit_action, name='edit_action'),
+        ]
+      ```
+      最后在index.html文件中添加‘新建文章’超链接
+      ```
+        <a href="{% url 'blog:edit_page' %}">新文章</a>
+      ```
