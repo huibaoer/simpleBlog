@@ -320,3 +320,116 @@ class Article(models.Model):
       ```
         <a href="{% url 'blog:edit_page' %}">新文章</a>
       ```
+
+      - 文章撰写页面添加修改文章功能
+      上面的文章撰写页面实现了，点击index页面的新文章按钮，跳转到文章撰写页面，然后创建新文章。但是博客还需要有修改已有文章的功能，下面完善文章撰写页面，让其拥有修改文章的功能
+      思路如下：跳转到文章撰写页面的时候需要传递一个article_id作为参数，当新建文章时，article_id为0；当修改文章时，article_id为该文章的键值id。
+        - views.py下，为edit_page，添加article_id参数
+        ```
+          def edit_page(request, article_id):
+            if str(article_id) == '0':
+                return render(request, 'blog/edit_page.html')
+            article = models.Article.objects.get(pk=article_id)
+            return  render(request, 'blog/edit_page.html', {'article': article})
+        ```
+        - 配置edit_page函数的url，添加参数article_id
+        ```
+          url(r'edit/(?P<article_id>[0-9]+)/$', views.edit_page, name='edit_page'),
+        ```
+        - 编辑article_page.html的修改文章超链接，传递参数article_id
+        ```
+          <a href="{% url 'blog:edit_page' article.id %}">修改文章</a>
+        ```
+        - 编辑index.html的新建文章超链接，传递参数article_id为0
+        ```
+          <a href="{% url 'blog:edit_page' 0 %}">新文章</a>  
+        ```
+        - 在edit_page.html中根据article_id的值区分是新建文章还是修改文章，修改文章需要将文章的内容填写在编辑框内
+        ```
+          <form action="{% url 'blog:edit_action' %}" method="post">
+            {% csrf_token %}
+            {% if article %}
+                <label>文章标题
+                    <input type="text" name="title" value="{{ article.title }}"/>
+                </label>
+                <br/>
+                <label>文章内容
+                    <input type="text" name="content" value="{{ article.content }}"/>
+                </label>
+            {% else %}
+                <label>文章标题
+                    <input type="text" name="title" "/>
+                </label>
+                <br/>
+                <label>文章内容
+                    <input type="text" name="content" "/>
+                </label>
+            {% endif %}
+            <br/>
+            <input type="submit" value="提交">
+          </form>
+        ```
+
+        - 编辑页面点击提交按钮，是新建文章的话就创建新的数据model；是修改文章的话就修改本编文章的数据model。
+          - 方法1，同样使用修改url，添加article_id参数的方式判断
+          - 方法2，不修改url。通过隐藏的input标签传递article_id
+        下面使用方法2来实现，在edit_page.html中添加隐藏的input标签。
+        ```
+          <form action="{% url 'blog:edit_action' %}" method="post">
+            {% csrf_token %}
+            {% if article %}
+                <input type="hidden" name="article_id" value="{{ article.id }}">
+                <label>文章标题
+                    <input type="text" name="title" value="{{ article.title }}"/>
+                </label>
+                <br/>
+                <label>文章内容
+                    <input type="text" name="content" value="{{ article.content }}"/>
+                </label>
+            {% else %}
+                <input type="hidden" name="article_id" value="0">
+                <label>文章标题
+                    <input type="text" name="title" "/>
+                </label>
+                <br/>
+                <label>文章内容
+                    <input type="text" name="content" "/>
+                </label>
+            {% endif %}
+            <br/>
+            <input type="submit" value="提交">
+          </form>
+        ```
+
+        下面修改views.py的提交按钮的响应函数
+        ```
+          def edit_action(request):
+            title = request.POST.get('title', 'TITLE')
+            content = request.POST.get('content', 'CONTENT')
+            article_id = request.POST.get('article_id', '0')
+
+            if article_id == '0':
+                models.Article.objects.create(title=title, content=content)
+                articles = models.Article.objects.all()
+                return render(request, 'blog/index.html', {'articles': articles})
+
+            article = models.Article.objects.get(pk=article_id)
+            article.title = title
+            article.content = content
+            article.save()
+            return render(request, 'blog/article_page.html', {'article': article})
+        ```
+
+## 小技巧
+- 过滤器
+{{ value | filter }}，例如：{{ article_id | default:'0' }}表示article_id的缺省值为0
+- Django shell
+python3 manage.py shell 启动Django shell，可以进行调试
+- admin
+配置admin，更多可参考Django文档
+```
+class ArticleAdmin(admin.ModelAdmin):
+    list_display = ('title', 'content')
+
+admin.site.register(models.Article, ArticleAdmin)
+```
